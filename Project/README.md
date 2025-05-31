@@ -86,3 +86,5 @@ This project has main features like:
 *User Experience*: Clean, responsive interface with drag-and-drop support
 *Real-Time Feedback*: Instant alerts and charts after upload
 *Flexibility*: Easy to customize thresholds or add more platforms
+
+*Screenshots*: I have also uploaded a folder #images# where you can look at the screenshots of the working web app
