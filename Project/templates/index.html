@@ -1,1 +1,766 @@
 
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sensor Data Analysis Platform</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/plotly.js/2.26.0/plotly.min.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg,rgb(234, 102, 219) 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+            animation: fadeInDown 1s ease-out;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        .sidebar {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 25px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+            height: fit-content;
+            animation: slideInLeft 1s ease-out;
+        }
+
+        .content-area {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 25px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+            animation: slideInRight 1s ease-out;
+        }
+
+        .upload-section {
+            margin-bottom: 30px;
+        }
+
+        .upload-area {
+            border: 3px dashed #667eea;
+            border-radius: 10px;
+            padding: 40px 20px;
+            text-align: center;
+            background: rgba(102, 126, 234, 0.05);
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .upload-area:hover {
+            border-color: #764ba2;
+            background: rgba(118, 75, 162, 0.1);
+            transform: translateY(-2px);
+        }
+
+        .upload-area.dragover {
+            border-color: #28a745;
+            background: rgba(40, 167, 69, 0.1);
+        }
+
+        .upload-icon {
+            font-size: 3rem;
+            color: #667eea;
+            margin-bottom: 15px;
+        }
+
+        .file-input {
+            display: none;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 12px 25px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .threshold-section {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 2px solid #eee;
+        }
+
+        .threshold-group {
+            margin-bottom: 20px;
+        }
+
+        .threshold-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #555;
+        }
+
+        .threshold-input {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 6px;
+            font-size: 1rem;
+            transition: border-color 0.3s ease;
+        }
+
+        .threshold-input:focus {
+            outline: none;
+            border-color:rgb(26, 29, 41);
+        }
+
+        .stats-section {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 2px solid #eee;
+        }
+
+        .stat-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            padding: 8px 0;
+        }
+
+        .stat-label {
+            font-weight: 600;
+            color: #555;
+        }
+
+        .stat-value {
+            color:rgb(19, 22, 37);
+            font-weight: 500;
+        }
+
+        .alerts-section {
+            margin-top: 20px;
+        }
+
+        .alert-item {
+            background: linear-gradient(135deg, #ff6b6b, #ee5a52);
+            color: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            animation: slideIn 0.5s ease-out;
+        }
+
+        .alert-header {
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+
+        .plots-container {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 25px;
+        }
+
+        .plot-section {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+
+        .plot-title {
+            font-size: 1.3rem;
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: #333;
+            text-align: center;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 40px;
+        }
+
+        .loading.show {
+            display: block;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        .section-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: #333;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 8px;
+        }
+
+        .status-message {
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-weight: 500;
+        }
+
+        .status-success {
+            background: linear-gradient(135deg, #28a745, #20c997);
+            color: white;
+        }
+
+        .status-error {
+            background: linear-gradient(135deg, #dc3545, #fd7e14);
+            color: white;
+        }
+
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        @media (max-width: 1024px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px;
+            }
+            
+            .header h1 {
+                font-size: 1.8rem;
+            }
+            
+            .upload-area {
+                padding: 30px 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1><i class="fas fa-chart-line"></i> Sensor Data Analysis Platform</h1>
+            <p>Process and analyze temperature & strain sensor data from WIN & NC platforms</p>
+        </div>
+
+        <div class="main-content">
+            <div class="sidebar">
+                <div class="upload-section">
+                    <h2 class="section-title"><i class="fas fa-upload"></i> Upload Data</h2>
+                    <div class="upload-area" id="uploadArea">
+                        <div class="upload-icon">
+                            <i class="fas fa-cloud-upload-alt"></i>
+                        </div>
+                        <p><strong>Click to upload</strong> or drag and drop</p>
+                        <p>ZIP files containing CSV sensor data</p>
+                        <input type="file" id="fileInput" class="file-input" accept=".zip">
+                    </div>
+                    <button class="btn" id="uploadBtn" style="margin-top: 15px; width: 100%;">
+                        <i class="fas fa-upload"></i> Upload & Process
+                    </button>
+                </div>
+
+                <div class="threshold-section">
+                    <h3 class="section-title"><i class="fas fa-sliders-h"></i> Thresholds</h3>
+                    <div class="threshold-group">
+                        <label for="tempThreshold">Temperature Threshold (°C)</label>
+                        <input type="number" id="tempThreshold" class="threshold-input" value="50" step="0.1">
+                    </div>
+                    <div class="threshold-group">
+                        <label for="strainThreshold">Strain Threshold</label>
+                        <input type="number" id="strainThreshold" class="threshold-input" value="5000" step="1">
+                    </div>
+                    <button class="btn" id="updateThresholds" style="width: 100%;">
+                        <i class="fas fa-save"></i> Update Thresholds
+                    </button>
+                </div>
+
+                <div class="stats-section" id="statsSection" style="display: none;">
+                    <h3 class="section-title"><i class="fas fa-chart-bar"></i> Summary</h3>
+                    <div id="summaryStats"></div>
+                </div>
+
+                <div class="alerts-section" id="alertsSection" style="display: none;">
+                    <h3 class="section-title"><i class="fas fa-exclamation-triangle"></i> Alerts</h3>
+                    <div id="alertsList"></div>
+                </div>
+            </div>
+
+            <div class="content-area">
+                <div id="statusMessage"></div>
+                
+                <div class="loading" id="loadingIndicator">
+                    <div class="spinner"></div>
+                    <p>Processing your data...</p>
+                </div>
+
+                <div class="plots-container" id="plotsContainer" style="display: none;">
+                    <div class="plot-section">
+                        <h3 class="plot-title">Temperature Sensor Data</h3>
+                        <div id="temperaturePlot"></div>
+                    </div>
+                    <div class="plot-section">
+                        <h3 class="plot-title">Strain Sensor Data</h3>
+                        <div id="strainPlot"></div>
+                    </div>
+                </div>
+
+                <div id="welcomeMessage" style="text-align: center; padding: 80px 20px; color: #666;">
+                    <i class="fas fa-analytics" style="font-size: 4rem; margin-bottom: 20px; color: #667eea;"></i>
+                    <h3 style="margin-bottom: 15px;">Welcome to Sensor Data Analysis</h3>
+                    <p>Upload a ZIP file containing CSV sensor data to begin analysis</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        class SensorDataAnalyzer {
+            constructor() {
+                this.data = null;
+                this.currentThresholds = {
+                    temperature: 50,
+                    strain: 5000
+                };
+                this.initializeElements();
+                this.attachEventListeners();
+                this.loadCurrentThresholds();
+                this.generateSampleData(); // For demo purposes
+            }
+
+            initializeElements() {
+                this.uploadArea = document.getElementById('uploadArea');
+                this.fileInput = document.getElementById('fileInput');
+                this.uploadBtn = document.getElementById('uploadBtn');
+                this.tempThreshold = document.getElementById('tempThreshold');
+                this.strainThreshold = document.getElementById('strainThreshold');
+                this.updateThresholdsBtn = document.getElementById('updateThresholds');
+                this.loadingIndicator = document.getElementById('loadingIndicator');
+                this.plotsContainer = document.getElementById('plotsContainer');
+                this.statusMessage = document.getElementById('statusMessage');
+                this.welcomeMessage = document.getElementById('welcomeMessage');
+                this.statsSection = document.getElementById('statsSection');
+                this.alertsSection = document.getElementById('alertsSection');
+            }
+
+            attachEventListeners() {
+                // File upload events
+                this.uploadArea.addEventListener('click', () => this.fileInput.click());
+                this.fileInput.addEventListener('change', this.handleFileSelect.bind(this));
+                this.uploadBtn.addEventListener('click', this.handleUpload.bind(this));
+
+                // Drag and drop events
+                this.uploadArea.addEventListener('dragover', this.handleDragOver.bind(this));
+                this.uploadArea.addEventListener('dragleave', this.handleDragLeave.bind(this));
+                this.uploadArea.addEventListener('drop', this.handleDrop.bind(this));
+
+                // Threshold update
+                this.updateThresholdsBtn.addEventListener('click', this.updateThresholds.bind(this));
+            }
+
+            loadCurrentThresholds() {
+                this.tempThreshold.value = this.currentThresholds.temperature;
+                this.strainThreshold.value = this.currentThresholds.strain;
+            }
+
+            handleDragOver(e) {
+                e.preventDefault();
+                this.uploadArea.classList.add('dragover');
+            }
+
+            handleDragLeave(e) {
+                e.preventDefault();
+                this.uploadArea.classList.remove('dragover');
+            }
+
+            handleDrop(e) {
+                e.preventDefault();
+                this.uploadArea.classList.remove('dragover');
+                const files = e.dataTransfer.files;
+                if (files.length > 0) {
+                    this.fileInput.files = files;
+                    this.handleFileSelect();
+                }
+            }
+
+            handleFileSelect() {
+                const file = this.fileInput.files[0];
+                if (file) {
+                    this.uploadArea.innerHTML = `
+                        <div class="upload-icon" style="color: #28a745;">
+                            <i class="fas fa-file-archive"></i>
+                        </div>
+                        <p><strong>Selected:</strong> ${file.name}</p>
+                        <p>Size: ${this.formatFileSize(file.size)}</p>
+                    `;
+                }
+            }
+
+            formatFileSize(bytes) {
+                if (bytes === 0) return '0 Bytes';
+                const k = 1024;
+                const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+                const i = Math.floor(Math.log(bytes) / Math.log(k));
+                return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+            }
+
+            async handleUpload() {
+                const file = this.fileInput.files[0];
+                if (!file) {
+                    // Use sample data for demo
+                    this.processData(this.generateSampleData());
+                    return;
+                }
+
+                this.showLoading(true);
+                this.uploadBtn.disabled = true;
+
+                try {
+                    // Simulate processing for demo
+                    await new Promise(resolve => setTimeout(resolve, 2000));
+                    
+                    const result = this.generateSampleData();
+                    this.showMessage('Data processed successfully!', 'success');
+                    this.processData(result);
+                    
+                } catch (error) {
+                    this.showMessage('Error processing file: ' + error.message, 'error');
+                } finally {
+                    this.showLoading(false);
+                    this.uploadBtn.disabled = false;
+                }
+            }
+
+            generateSampleData() {
+                // Generate sample sensor data for demonstration
+                const now = new Date();
+                const data = {
+                    temperature: [],
+                    strain: [],
+                    timestamps: []
+                };
+
+                for (let i = 0; i < 100; i++) {
+                    const timestamp = new Date(now.getTime() - (100 - i) * 60000); // 1 minute intervals
+                    data.timestamps.push(timestamp);
+                    
+                    // Generate temperature data (20-80°C with some noise)
+                    const tempBase = 45 + Math.sin(i * 0.1) * 10;
+                    const tempNoise = (Math.random() - 0.5) * 10;
+                    data.temperature.push(Math.max(0, tempBase + tempNoise));
+                    
+                    // Generate strain data (0-8000 with some spikes)
+                    const strainBase = 3000 + Math.sin(i * 0.05) * 1000;
+                    const strainNoise = (Math.random() - 0.5) * 500;
+                    const spike = Math.random() < 0.05 ? Math.random() * 3000 : 0; // 5% chance of spike
+                    data.strain.push(Math.max(0, strainBase + strainNoise + spike));
+                }
+
+                return data;
+            }
+
+            processData(data) {
+                this.data = data;
+                this.displayResults();
+            }
+
+            displayResults() {
+                if (!this.data) return;
+
+                this.welcomeMessage.style.display = 'none';
+                this.plotsContainer.style.display = 'block';
+
+                // Create temperature plot
+                this.createTemperaturePlot();
+                
+                // Create strain plot
+                this.createStrainPlot();
+
+                // Display summary statistics
+                this.displaySummary();
+
+                // Check for alerts
+                this.checkAlerts();
+            }
+
+            createTemperaturePlot() {
+                const trace = {
+                    x: this.data.timestamps,
+                    y: this.data.temperature,
+                    type: 'scatter',
+                    mode: 'lines+markers',
+                    name: 'Temperature',
+                    line: { color: '#ff6b6b', width: 2 },
+                    marker: { size: 4 }
+                };
+
+                const thresholdTrace = {
+                    x: this.data.timestamps,
+                    y: new Array(this.data.timestamps.length).fill(this.currentThresholds.temperature),
+                    type: 'scatter',
+                    mode: 'lines',
+                    name: 'Threshold',
+                    line: { color: '#ff0000', dash: 'dash', width: 2 }
+                };
+
+                const layout = {
+                    title: 'Temperature Sensor Data Over Time',
+                    xaxis: { title: 'Time' },
+                    yaxis: { title: 'Temperature (°C)' },
+                    showlegend: true,
+                    hovermode: 'x'
+                };
+
+                Plotly.newPlot('temperaturePlot', [trace, thresholdTrace], layout, { responsive: true });
+            }
+
+            createStrainPlot() {
+                const trace = {
+                    x: this.data.timestamps,
+                    y: this.data.strain,
+                    type: 'scatter',
+                    mode: 'lines+markers',
+                    name: 'Strain',
+                    line: { color: '#4ecdc4', width: 2 },
+                    marker: { size: 4 }
+                };
+
+                const thresholdTrace = {
+                    x: this.data.timestamps,
+                    y: new Array(this.data.timestamps.length).fill(this.currentThresholds.strain),
+                    type: 'scatter',
+                    mode: 'lines',
+                    name: 'Threshold',
+                    line: { color: '#ff0000', dash: 'dash', width: 2 }
+                };
+
+                const layout = {
+                    title: 'Strain Sensor Data Over Time',
+                    xaxis: { title: 'Time' },
+                    yaxis: { title: 'Strain' },
+                    showlegend: true,
+                    hovermode: 'x'
+                };
+
+                Plotly.newPlot('strainPlot', [trace, thresholdTrace], layout, { responsive: true });
+            }
+
+            displaySummary() {
+                if (!this.data) return;
+
+                this.statsSection.style.display = 'block';
+                const statsContainer = document.getElementById('summaryStats');
+                
+                const tempStats = this.calculateStats(this.data.temperature);
+                const strainStats = this.calculateStats(this.data.strain);
+                
+                const startTime = this.data.timestamps[0].toLocaleString();
+                const endTime = this.data.timestamps[this.data.timestamps.length - 1].toLocaleString();
+                
+                statsContainer.innerHTML = `
+                    <div class="stat-item">
+                        <span class="stat-label">Total Records:</span>
+                        <span class="stat-value">${this.data.timestamps.length.toLocaleString()}</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Platforms:</span>
+                        <span class="stat-value">WIN, NC</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Temp Range:</span>
+                        <span class="stat-value">${tempStats.min.toFixed(1)}°C - ${tempStats.max.toFixed(1)}°C</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Temp Average:</span>
+                        <span class="stat-value">${tempStats.avg.toFixed(1)}°C</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Strain Range:</span>
+                        <span class="stat-value">${strainStats.min.toFixed(0)} - ${strainStats.max.toFixed(0)}</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Strain Average:</span>
+                        <span class="stat-value">${strainStats.avg.toFixed(0)}</span>
+                    </div>
+                `;
+            }
+
+            calculateStats(values) {
+                const min = Math.min(...values);
+                const max = Math.max(...values);
+                const avg = values.reduce((sum, val) => sum + val, 0) / values.length;
+                return { min, max, avg };
+            }
+
+            checkAlerts() {
+                if (!this.data) return;
+
+                const alerts = [];
+                
+                // Check temperature alerts
+                for (let i = 0; i < this.data.temperature.length; i++) {
+                    if (this.data.temperature[i] > this.currentThresholds.temperature) {
+                        alerts.push({
+                            type: 'Temperature',
+                            value: this.data.temperature[i].toFixed(1),
+                            threshold: this.currentThresholds.temperature,
+                            timestamp: this.data.timestamps[i].toLocaleString()
+                        });
+                    }
+                }
+
+                // Check strain alerts
+                for (let i = 0; i < this.data.strain.length; i++) {
+                    if (this.data.strain[i] > this.currentThresholds.strain) {
+                        alerts.push({
+                            type: 'Strain',
+                            value: this.data.strain[i].toFixed(0),
+                            threshold: this.currentThresholds.strain,
+                            timestamp: this.data.timestamps[i].toLocaleString()
+                        });
+                    }
+                }
+
+                this.displayAlerts(alerts);
+            }
+
+            displayAlerts(alerts) {
+                if (alerts && alerts.length > 0) {
+                    this.alertsSection.style.display = 'block';
+                    const alertsContainer = document.getElementById('alertsList');
+                    
+                    alertsContainer.innerHTML = alerts.slice(0, 5).map(alert => `
+                        <div class="alert-item">
+                            <div class="alert-header">${alert.type} Alert</div>
+                            <div>Value: ${alert.value} (Threshold: ${alert.threshold})</div>
+                            <div>Time: ${alert.timestamp}</div>
+                        </div>
+                    `).join('');
+
+                    if (alerts.length > 5) {
+                        alertsContainer.innerHTML += `
+                            <div class="alert-item" style="opacity: 0.8;">
+                                <div class="alert-header">+ ${alerts.length - 5} more alerts</div>
+                            </div>
+                        `;
+                    }
+                } else {
+                    this.alertsSection.style.display = 'none';
+                }
+            }
+
+            updateThresholds() {
+                const newTempThreshold = parseFloat(this.tempThreshold.value);
+                const newStrainThreshold = parseFloat(this.strainThreshold.value);
+
+                if (isNaN(newTempThreshold) || isNaN(newStrainThreshold)) {
+                    this.showMessage('Please enter valid threshold values', 'error');
+                    return;
+                }
+
+                this.currentThresholds.temperature = newTempThreshold;
+                this.currentThresholds.strain = newStrainThreshold;
+
+                this.showMessage('Thresholds updated successfully!', 'success');
+
+                // Re-render plots and check alerts if data exists
+                if (this.data) {
+                    this.displayResults();
+                }
+            }
+
+            showLoading(show) {
+                if (show) {
+                    this.loadingIndicator.classList.add('show');
+                } else {
+                    this.loadingIndicator.classList.remove('show');
+                }
+            }
+
+            showMessage(message, type) {
+                this.statusMessage.innerHTML = `
+                    <div class="status-message status-${type}">
+                        <i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-circle'}"></i>
+                        ${message}
+                    </div>
+                `;
+                
+                // Auto-hide after 5 seconds
+                setTimeout(() => {
+                    this.statusMessage.innerHTML = '';
+                }, 5000);
+            }
+        }
+
+        // Initialize the application
+        document.addEventListener('DOMContentLoaded', () => {
+            new SensorDataAnalyzer();
+        });
+    </script>
+</body>
+</html>
