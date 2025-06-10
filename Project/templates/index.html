@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -470,31 +469,75 @@
             }
 
             async handleUpload() {
-                const file = this.fileInput.files[0];
-                if (!file) {
-                    // Use sample data for demo
-                    this.processData(this.generateSampleData());
-                    return;
-                }
+    const file = this.fileInput.files[0];
+    if (!file) {
+        this.showMessage('Please select a file to upload', 'error');
+        return;
+    }
 
-                this.showLoading(true);
-                this.uploadBtn.disabled = true;
+    this.showLoading(true);
+    this.uploadBtn.disabled = true;
 
-                try {
-                    // Simulate processing for demo
-                    await new Promise(resolve => setTimeout(resolve, 2000));
-                    
-                    const result = this.generateSampleData();
-                    this.showMessage('Data processed successfully!', 'success');
-                    this.processData(result);
-                    
-                } catch (error) {
-                    this.showMessage('Error processing file: ' + error.message, 'error');
-                } finally {
-                    this.showLoading(false);
-                    this.uploadBtn.disabled = false;
-                }
+    try {
+        const formData = new FormData();
+        formData.append("file", file);
+
+        const response = await fetch("/upload", {
+            method: "POST",
+            body: formData
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            this.showMessage('Data processed successfully!', 'success');
+            this.welcomeMessage.style.display = 'none';
+            this.plotsContainer.style.display = 'block';
+
+            const parsedTemp = JSON.parse(result.plots.temperature);
+            const parsedStrain = JSON.parse(result.plots.strain);
+
+            Plotly.newPlot("temperaturePlot", parsedTemp.data, parsedTemp.layout);
+            Plotly.newPlot("strainPlot", parsedStrain.data, parsedStrain.layout);
+
+            this.statsSection.style.display = 'block';
+            const statsContainer = document.getElementById('summaryStats');
+            statsContainer.innerHTML = `
+                <div class="stat-item"><span class="stat-label">Total Records:</span><span class="stat-value">${result.summary.total_records}</span></div>
+                <div class="stat-item"><span class="stat-label">Platforms:</span><span class="stat-value">${result.summary.platforms.join(', ')}</span></div>
+                <div class="stat-item"><span class="stat-label">Temp Range:</span><span class="stat-value">${result.summary.temperature_stats.min.toFixed(1)}°C - ${result.summary.temperature_stats.max.toFixed(1)}°C</span></div>
+                <div class="stat-item"><span class="stat-label">Temp Avg:</span><span class="stat-value">${result.summary.temperature_stats.avg.toFixed(1)}°C</span></div>
+                <div class="stat-item"><span class="stat-label">Strain Range:</span><span class="stat-value">${result.summary.strain_stats.min.toFixed(1)} - ${result.summary.strain_stats.max.toFixed(1)}</span></div>
+                <div class="stat-item"><span class="stat-label">Strain Avg:</span><span class="stat-value">${result.summary.strain_stats.avg.toFixed(1)}</span></div>
+            `;
+
+            // Show alerts
+            const alertsContainer = document.getElementById('alertsList');
+            if (result.alerts.length > 0) {
+                this.alertsSection.style.display = 'block';
+                alertsContainer.innerHTML = result.alerts.map(alert => `
+                    <div class="alert-item">
+                        <div class="alert-header">${alert.type} Alert</div>
+                        <div>Sensor: ${alert.sensor}</div>
+                        <div>Value: ${alert.value} (Threshold: ${alert.threshold})</div>
+                        <div>Time: ${alert.timestamp}</div>
+                    </div>
+                `).join('');
+            } else {
+                this.alertsSection.style.display = 'none';
             }
+
+        } else {
+            this.showMessage('Error: ' + (result.error || 'Failed to process data'), 'error');
+        }
+    } catch (error) {
+        this.showMessage('Upload failed: ' + error.message, 'error');
+    } finally {
+        this.showLoading(false);
+        this.uploadBtn.disabled = false;
+    }
+}
+
 
             generateSampleData() {
                 // Generate sample sensor data for demonstration
